@@ -3,9 +3,17 @@ import MainLayout from "@/layouts/MainLayout";
 import AuthForm from "@/components/AuthForm";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // Отладочная информация
+    console.log("Login page: Auth status", { user, loading });
+  }, [user, loading]);
 
   // Если пользователь уже авторизован, перенаправляем на страницу Dashboard
   if (user) {
