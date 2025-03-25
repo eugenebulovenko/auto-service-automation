@@ -104,7 +104,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
       }
 
       if (type === "login") {
-        console.log("Attempting to sign in");
+        console.log("Attempting to sign in with:", formData.email, "password length:", formData.password.length);
         await signIn(formData.email, formData.password);
       } else {
         console.log("Attempting to sign up");
@@ -121,6 +121,21 @@ const AuthForm = ({ type }: AuthFormProps) => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // For testing purposes, provide defaults for the login form
+  const populateTestCredentials = (userType: 'admin' | 'mechanic' | 'client') => {
+    const credentials = {
+      admin: { email: 'admin@test.com', password: 'admin123' },
+      mechanic: { email: 'mechanic@test.com', password: 'mechanic123' },
+      client: { email: 'client@test.com', password: 'client123' }
+    };
+    
+    setFormData(prev => ({
+      ...prev,
+      email: credentials[userType].email,
+      password: credentials[userType].password
+    }));
   };
 
   return (
@@ -258,15 +273,48 @@ const AuthForm = ({ type }: AuthFormProps) => {
         )}
         
         {type === "login" && (
-          <div className="flex justify-end">
-            <Link to="/forgot-password" className="text-sm text-primary hover:underline">
-              Забыли пароль?
-            </Link>
-          </div>
+          <>
+            <div className="flex justify-end">
+              <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                Забыли пароль?
+              </Link>
+            </div>
+            
+            {/* Quick login buttons for testing */}
+            <div className="flex flex-col gap-2 my-2 pt-2 border-t">
+              <p className="text-sm text-muted-foreground">Тестовые аккаунты:</p>
+              <div className="flex gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => populateTestCredentials('admin')}
+                >
+                  Админ
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => populateTestCredentials('mechanic')}
+                >
+                  Механик
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => populateTestCredentials('client')}
+                >
+                  Клиент
+                </Button>
+              </div>
+            </div>
+          </>
         )}
         
-        <Button type="submit" className="w-full mt-6" disabled={loading}>
-          {loading ? "Загрузка..." : type === "login" ? "Войти" : "Зарегистрироваться"}
+        <Button type="submit" className="w-full mt-6" disabled={loading || submitting}>
+          {loading || submitting ? "Загрузка..." : type === "login" ? "Войти" : "Зарегистрироваться"}
         </Button>
       </form>
       

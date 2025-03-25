@@ -38,6 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log("Fetching profile for user:", userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -50,10 +51,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (data) {
+        console.log("Profile fetched successfully:", data);
         setProfile(data as Profile);
+      } else {
+        console.log("No profile found for user:", userId);
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Error in fetchProfile:', error);
     }
   };
 
@@ -117,7 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signUp = async (email: string, password: string, firstName: string, lastName: string, phone?: string) => {
     try {
       setLoading(true);
-      console.log("AuthProvider: Signing up");
+      console.log("AuthProvider: Signing up", { email, firstName, lastName });
       
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -173,6 +177,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       console.log("AuthProvider: Signing in", { email });
       
+      // Clear any previous session first to ensure fresh login
+      await supabase.auth.signOut();
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -189,6 +196,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       console.log("User signed in successfully:", data.user?.id);
+      console.log("Session data:", data.session);
+      
+      // Manually update state
+      setUser(data.user);
+      setSession(data.session);
+      
+      if (data.user) {
+        await fetchProfile(data.user.id);
+      }
+      
       toast({
         title: "Успешный вход",
         description: "Добро пожаловать в систему!",
@@ -223,6 +240,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
         return;
       }
+      
+      // Manually clear state
+      setUser(null);
+      setSession(null);
+      setProfile(null);
       
       console.log("User signed out successfully");
       navigate("/");
