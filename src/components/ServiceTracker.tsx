@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Clock, Tools, CarFront, AlertTriangle, Camera } from "lucide-react";
+import { CheckCircle2, Clock, Wrench, CarFront, AlertTriangle, Camera } from "lucide-react";
 
 interface RepairStep {
   id: string;
@@ -55,7 +54,7 @@ const mockRepairDetails: RepairDetail = {
       description: "Выполняется замена тормозных колодок и ротора, регулировка развал-схождения",
       status: "in-progress",
       time: "16.10.2023, 09:45",
-      icon: Tools
+      icon: Wrench
     },
     {
       id: "step4",

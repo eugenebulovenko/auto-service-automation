@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import MainLayout from "@/layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, Car, Tool, Settings, AlertTriangle, CheckCircle } from "lucide-react";
+import { Calendar, Clock, Car, Wrench, Settings, AlertTriangle, CheckCircle } from "lucide-react";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -128,7 +127,7 @@ const Dashboard = () => {
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium flex items-center">
-                      <Tool className="mr-2 h-4 w-4 text-primary" />
+                      <Wrench className="mr-2 h-4 w-4 text-primary" />
                       Активные заказы
                     </CardTitle>
                   </CardHeader>

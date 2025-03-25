@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,7 @@ import {
   ArrowRight,
   Car,
   Settings,
-  Tool,
+  Hammer,
 } from "lucide-react";
 
 const Index = () => {
@@ -188,7 +187,7 @@ const Index = () => {
                   title: "Механики",
                   description:
                     "Просмотр заданий, отметки о ходе выполнения работ и запрос необходимых запчастей",
-                  icon: <Tool />,
+                  icon: <Hammer />,
                   steps: [
                     "Просмотр назначенных работ",
                     "Получение информации",
