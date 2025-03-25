@@ -36,10 +36,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+
+      if (data) {
+        setProfile(data as Profile);
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
   useEffect(() => {
+    console.log("AuthProvider: Initializing");
+    
     // Set up listener for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        console.log("AuthProvider: Auth state changed", { event, session: currentSession?.user?.id });
+        
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -54,44 +79,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      if (currentSession?.user) {
-        fetchProfile(currentSession.user.id);
+    const getInitialSession = async () => {
+      try {
+        setLoading(true);
+        console.log("AuthProvider: Getting initial session");
+        
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Error getting session:", error);
+          setLoading(false);
+          return;
+        }
+        
+        console.log("AuthProvider: Initial session fetched", { session: data?.session?.user?.id });
+        
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+        
+        if (data.session?.user) {
+          await fetchProfile(data.session.user.id);
+        }
+      } catch (error) {
+        console.error("Error in getInitialSession:", error);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
-    });
+    };
+
+    getInitialSession();
 
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        return;
-      }
-
-      setProfile(data as Profile);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    }
-  };
-
   const signUp = async (email: string, password: string, firstName: string, lastName: string, phone?: string) => {
     try {
       setLoading(true);
+      console.log("AuthProvider: Signing up");
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -106,6 +133,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) {
+        console.error("Signup error:", error);
         toast({
           title: "Ошибка при регистрации",
           description: error.message,
@@ -114,13 +142,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      toast({
-        title: "Регистрация прошла успешно",
-        description: "Вы успешно зарегистрировались в системе",
-      });
-      
-      navigate("/dashboard");
+      if (data.user) {
+        console.log("User signed up successfully:", data.user.id);
+        toast({
+          title: "Регистрация прошла успешно",
+          description: "Вы успешно зарегистрировались в системе",
+        });
+        
+        navigate("/dashboard");
+      } else {
+        toast({
+          title: "Требуется подтверждение",
+          description: "Пожалуйста, проверьте свою электронную почту для подтверждения регистрации",
+        });
+      }
     } catch (error: any) {
+      console.error("Unexpected signup error:", error);
       toast({
         title: "Ошибка",
         description: error.message || "Произошла ошибка при регистрации",
@@ -134,12 +171,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      console.log("AuthProvider: Signing in", { email });
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        console.error("Login error:", error);
         toast({
           title: "Ошибка при входе",
           description: error.message,
@@ -148,6 +188,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
+      console.log("User signed in successfully:", data.user?.id);
       toast({
         title: "Успешный вход",
         description: "Добро пожаловать в систему!",
@@ -155,6 +196,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       navigate("/dashboard");
     } catch (error: any) {
+      console.error("Unexpected login error:", error);
       toast({
         title: "Ошибка",
         description: error.message || "Произошла ошибка при входе",
@@ -168,9 +210,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = async () => {
     try {
       setLoading(true);
+      console.log("AuthProvider: Signing out");
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) {
+        console.error("Logout error:", error);
         toast({
           title: "Ошибка при выходе",
           description: error.message,
@@ -179,8 +224,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       
+      console.log("User signed out successfully");
       navigate("/");
     } catch (error: any) {
+      console.error("Unexpected logout error:", error);
       toast({
         title: "Ошибка",
         description: error.message || "Произошла ошибка при выходе из системы",

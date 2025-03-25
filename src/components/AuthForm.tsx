@@ -26,6 +26,8 @@ const AuthForm = ({ type }: AuthFormProps) => {
     confirmPassword: "",
     acceptTerms: false,
   });
+  
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -38,73 +40,86 @@ const AuthForm = ({ type }: AuthFormProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
-    if (type === "register") {
-      if (!formData.firstName.trim()) {
-        toast({
-          title: "Ошибка",
-          description: "Пожалуйста, введите ваше имя",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      if (!formData.lastName.trim()) {
-        toast({
-          title: "Ошибка",
-          description: "Пожалуйста, введите вашу фамилию",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      if (formData.password !== formData.confirmPassword) {
-        toast({
-          title: "Ошибка",
-          description: "Пароли не совпадают",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      if (!formData.acceptTerms) {
-        toast({
-          title: "Ошибка",
-          description: "Необходимо принять условия использования",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
+    if (submitting) return;
     
-    if (!formData.email.trim()) {
-      toast({
-        title: "Ошибка",
-        description: "Пожалуйста, введите email",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!formData.password.trim()) {
-      toast({
-        title: "Ошибка",
-        description: "Пожалуйста, введите пароль",
-        variant: "destructive",
-      });
-      return;
-    }
+    try {
+      setSubmitting(true);
+      console.log("Form submitted", { type, email: formData.email });
+      
+      // Basic validation
+      if (type === "register") {
+        if (!formData.firstName.trim()) {
+          toast({
+            title: "Ошибка",
+            description: "Пожалуйста, введите ваше имя",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        if (!formData.lastName.trim()) {
+          toast({
+            title: "Ошибка",
+            description: "Пожалуйста, введите вашу фамилию",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        if (formData.password !== formData.confirmPassword) {
+          toast({
+            title: "Ошибка",
+            description: "Пароли не совпадают",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        if (!formData.acceptTerms) {
+          toast({
+            title: "Ошибка",
+            description: "Необходимо принять условия использования",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+      
+      if (!formData.email.trim()) {
+        toast({
+          title: "Ошибка",
+          description: "Пожалуйста, введите email",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (!formData.password.trim()) {
+        toast({
+          title: "Ошибка",
+          description: "Пожалуйста, введите пароль",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (type === "login") {
-      await signIn(formData.email, formData.password);
-    } else {
-      await signUp(
-        formData.email, 
-        formData.password, 
-        formData.firstName, 
-        formData.lastName,
-        formData.phone
-      );
+      if (type === "login") {
+        console.log("Attempting to sign in");
+        await signIn(formData.email, formData.password);
+      } else {
+        console.log("Attempting to sign up");
+        await signUp(
+          formData.email, 
+          formData.password, 
+          formData.firstName, 
+          formData.lastName,
+          formData.phone
+        );
+      }
+    } catch (error) {
+      console.error("Form submission error:", error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
