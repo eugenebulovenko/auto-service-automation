@@ -2,20 +2,62 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, ChevronDown, User, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, signOut, profile, isAdmin, isMechanic } = useAuth();
 
-  const navLinks = [
-    { name: "Главная", path: "/" },
-    { name: "Услуги", path: "/services" },
-    { name: "Запись", path: "/booking" },
-    { name: "Статус ремонта", path: "/tracking" },
-    { name: "Контакты", path: "/contact" },
-  ];
+  const getNavLinks = () => {
+    // Общие ссылки для всех
+    const commonLinks = [
+      { name: "Главная", path: "/" },
+      { name: "Услуги", path: "/services" },
+      { name: "Контакты", path: "/contact" },
+    ];
+
+    // Если пользователь авторизован
+    if (user) {
+      // Ссылки для клиентов
+      if (profile?.role === 'client') {
+        return [
+          ...commonLinks,
+          { name: "Запись", path: "/booking" },
+          { name: "Статус ремонта", path: "/tracking" },
+        ];
+      }
+      // Ссылки для механиков
+      else if (profile?.role === 'mechanic') {
+        return [
+          ...commonLinks,
+          { name: "Мои задания", path: "/mechanic/tasks" },
+        ];
+      }
+      // Ссылки для администраторов
+      else if (profile?.role === 'admin') {
+        return [
+          ...commonLinks,
+          { name: "Управление", path: "/admin" },
+        ];
+      }
+    }
+
+    // Для неавторизованных пользователей
+    return commonLinks;
+  };
+
+  const navLinks = getNavLinks();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -27,7 +69,7 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
-    // Close mobile menu when route changes
+    // Закрываем мобильное меню при смене маршрута
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
@@ -69,16 +111,52 @@ const Navbar = () => {
           </nav>
 
           <div className="hidden md:flex items-center space-x-4">
-            <Button
-              asChild
-              variant="ghost"
-              className="text-sm font-medium transition-colors"
-            >
-              <Link to="/login">Войти</Link>
-            </Button>
-            <Button asChild className="text-sm font-medium">
-              <Link to="/register">Регистрация</Link>
-            </Button>
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <User className="h-4 w-4" />
+                    {profile?.first_name || "Профиль"}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>
+                    {profile?.first_name} {profile?.last_name}
+                  </DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">
+                    {profile?.role === 'admin' && "Администратор"}
+                    {profile?.role === 'mechanic' && "Механик"}
+                    {profile?.role === 'client' && "Клиент"}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/dashboard">Панель управления</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile">Настройки профиля</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => signOut()} className="text-red-500">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Выйти
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="text-sm font-medium transition-colors"
+                >
+                  <Link to="/login">Войти</Link>
+                </Button>
+                <Button asChild className="text-sm font-medium">
+                  <Link to="/register">Регистрация</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -120,16 +198,37 @@ const Navbar = () => {
               </Link>
             ))}
             <div className="flex flex-col space-y-2 pt-2 border-t border-border">
-              <Button
-                asChild
-                variant="ghost"
-                className="justify-start text-sm font-medium"
-              >
-                <Link to="/login">Войти</Link>
-              </Button>
-              <Button asChild className="text-sm font-medium">
-                <Link to="/register">Регистрация</Link>
-              </Button>
+              {user ? (
+                <>
+                  <Link to="/dashboard" className="text-sm font-medium py-2">
+                    Панель управления
+                  </Link>
+                  <Link to="/profile" className="text-sm font-medium py-2">
+                    Настройки профиля
+                  </Link>
+                  <Button 
+                    variant="outline" 
+                    className="justify-start text-sm font-medium mt-2"
+                    onClick={() => signOut()}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Выйти
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="justify-start text-sm font-medium"
+                  >
+                    <Link to="/login">Войти</Link>
+                  </Button>
+                  <Button asChild className="text-sm font-medium">
+                    <Link to="/register">Регистрация</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </nav>
         </div>

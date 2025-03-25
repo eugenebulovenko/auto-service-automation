@@ -6,20 +6,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Phone } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AuthFormProps {
   type: "login" | "register";
-  onSubmit: (data: any) => void;
 }
 
-const AuthForm = ({ type, onSubmit }: AuthFormProps) => {
+const AuthForm = ({ type }: AuthFormProps) => {
   const { toast } = useToast();
+  const { signIn, signUp, loading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    name: "",
+    firstName: "",
+    lastName: "",
     phone: "",
     confirmPassword: "",
     acceptTerms: false,
@@ -33,15 +35,24 @@ const AuthForm = ({ type, onSubmit }: AuthFormProps) => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Basic validation
     if (type === "register") {
-      if (!formData.name.trim()) {
+      if (!formData.firstName.trim()) {
         toast({
           title: "Ошибка",
           description: "Пожалуйста, введите ваше имя",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (!formData.lastName.trim()) {
+        toast({
+          title: "Ошибка",
+          description: "Пожалуйста, введите вашу фамилию",
           variant: "destructive",
         });
         return;
@@ -84,7 +95,17 @@ const AuthForm = ({ type, onSubmit }: AuthFormProps) => {
       return;
     }
 
-    onSubmit(formData);
+    if (type === "login") {
+      await signIn(formData.email, formData.password);
+    } else {
+      await signUp(
+        formData.email, 
+        formData.password, 
+        formData.firstName, 
+        formData.lastName,
+        formData.phone
+      );
+    }
   };
 
   return (
@@ -97,16 +118,32 @@ const AuthForm = ({ type, onSubmit }: AuthFormProps) => {
         {type === "register" && (
           <>
             <div className="space-y-2">
-              <Label htmlFor="name">Имя</Label>
+              <Label htmlFor="firstName">Имя</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="name"
-                  name="name"
+                  id="firstName"
+                  name="firstName"
                   type="text"
-                  placeholder="Иван Иванов"
+                  placeholder="Иван"
                   className="pl-10"
-                  value={formData.name}
+                  value={formData.firstName}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Фамилия</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  placeholder="Иванов"
+                  className="pl-10"
+                  value={formData.lastName}
                   onChange={handleChange}
                 />
               </div>
@@ -114,14 +151,18 @@ const AuthForm = ({ type, onSubmit }: AuthFormProps) => {
             
             <div className="space-y-2">
               <Label htmlFor="phone">Телефон</Label>
-              <Input
-                id="phone"
-                name="phone"
-                type="tel"
-                placeholder="+7 (XXX) XXX-XX-XX"
-                value={formData.phone}
-                onChange={handleChange}
-              />
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  placeholder="+7 (XXX) XXX-XX-XX"
+                  className="pl-10"
+                  value={formData.phone}
+                  onChange={handleChange}
+                />
+              </div>
             </div>
           </>
         )}
@@ -172,13 +213,17 @@ const AuthForm = ({ type, onSubmit }: AuthFormProps) => {
           <>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Подтверждение пароля</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type={showPassword ? "text" : "password"}
-                value={formData.confirmPassword}
-                onChange={handleChange}
-              />
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showPassword ? "text" : "password"}
+                  className="pl-10 pr-10"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                />
+              </div>
             </div>
             
             <div className="flex items-center space-x-2">
@@ -205,8 +250,8 @@ const AuthForm = ({ type, onSubmit }: AuthFormProps) => {
           </div>
         )}
         
-        <Button type="submit" className="w-full mt-6">
-          {type === "login" ? "Войти" : "Зарегистрироваться"}
+        <Button type="submit" className="w-full mt-6" disabled={loading}>
+          {loading ? "Загрузка..." : type === "login" ? "Войти" : "Зарегистрироваться"}
         </Button>
       </form>
       

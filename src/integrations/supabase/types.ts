@@ -9,7 +9,450 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      appointment_services: {
+        Row: {
+          appointment_id: string
+          created_at: string | null
+          id: string
+          price: number
+          service_id: string
+        }
+        Insert: {
+          appointment_id: string
+          created_at?: string | null
+          id?: string
+          price: number
+          service_id: string
+        }
+        Update: {
+          appointment_id?: string
+          created_at?: string | null
+          id?: string
+          price?: number
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_services_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointments: {
+        Row: {
+          appointment_date: string
+          created_at: string | null
+          end_time: string
+          id: string
+          notes: string | null
+          start_time: string
+          status: string
+          total_price: number
+          updated_at: string | null
+          user_id: string
+          vehicle_id: string
+        }
+        Insert: {
+          appointment_date: string
+          created_at?: string | null
+          end_time: string
+          id?: string
+          notes?: string | null
+          start_time: string
+          status?: string
+          total_price: number
+          updated_at?: string | null
+          user_id: string
+          vehicle_id: string
+        }
+        Update: {
+          appointment_date?: string
+          created_at?: string | null
+          end_time?: string
+          id?: string
+          notes?: string | null
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string | null
+          user_id?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_parts: {
+        Row: {
+          created_at: string | null
+          id: string
+          part_id: string
+          price: number
+          quantity: number
+          work_order_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          part_id: string
+          price: number
+          quantity: number
+          work_order_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          part_id?: string
+          price?: number
+          quantity?: number
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_parts_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_parts_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_status_updates: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          created_by: string
+          id: string
+          status: string
+          work_order_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string | null
+          created_by: string
+          id?: string
+          status: string
+          work_order_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          status?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_status_updates_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parts: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          part_number: string | null
+          price: number
+          quantity_in_stock: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          part_number?: string | null
+          price: number
+          quantity_in_stock?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          part_number?: string | null
+          price?: number
+          quantity_in_stock?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          first_name: string
+          id: string
+          last_name: string
+          phone: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          first_name: string
+          id: string
+          last_name: string
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      repair_photos: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          photo_url: string
+          work_order_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          photo_url: string
+          work_order_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          photo_url?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repair_photos_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          id: string
+          rating: number
+          user_id: string
+          work_order_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          rating: number
+          user_id: string
+          work_order_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          rating?: number
+          user_id?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          category_id: string
+          created_at: string | null
+          description: string | null
+          duration: number
+          id: string
+          name: string
+          price: number
+          updated_at: string | null
+        }
+        Insert: {
+          category_id: string
+          created_at?: string | null
+          description?: string | null
+          duration: number
+          id?: string
+          name: string
+          price: number
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string
+          created_at?: string | null
+          description?: string | null
+          duration?: number
+          id?: string
+          name?: string
+          price?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          created_at: string | null
+          id: string
+          license_plate: string | null
+          make: string
+          model: string
+          updated_at: string | null
+          user_id: string
+          vin: string | null
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          license_plate?: string | null
+          make: string
+          model: string
+          updated_at?: string | null
+          user_id: string
+          vin?: string | null
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          license_plate?: string | null
+          make?: string
+          model?: string
+          updated_at?: string | null
+          user_id?: string
+          vin?: string | null
+          year?: number
+        }
+        Relationships: []
+      }
+      work_orders: {
+        Row: {
+          appointment_id: string | null
+          completion_date: string | null
+          created_at: string | null
+          id: string
+          mechanic_id: string | null
+          order_number: string
+          start_date: string | null
+          status: string
+          total_cost: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          completion_date?: string | null
+          created_at?: string | null
+          id?: string
+          mechanic_id?: string | null
+          order_number: string
+          start_date?: string | null
+          status?: string
+          total_cost?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          completion_date?: string | null
+          created_at?: string | null
+          id?: string
+          mechanic_id?: string | null
+          order_number?: string
+          start_date?: string | null
+          status?: string
+          total_cost?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +461,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_role: "admin" | "client" | "mechanic"
     }
     CompositeTypes: {
       [_ in never]: never
