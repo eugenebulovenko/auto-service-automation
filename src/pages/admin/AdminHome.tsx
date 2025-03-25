@@ -1,10 +1,9 @@
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Users, ClipboardList, Wrench } from "lucide-react";
+import { Calendar, Users, ClipboardList, Wrench, BarChart3 } from "lucide-react";
 
 const AdminHome = () => {
   const [stats, setStats] = useState({
