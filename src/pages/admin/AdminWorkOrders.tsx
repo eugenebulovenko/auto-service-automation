@@ -1,7 +1,4 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -9,11 +6,11 @@ import {
   TableCell,
   TableFooter,
   TableHead,
+  TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,11 +18,21 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { MoreVertical, Edit, Copy, Trash } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Edit, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -33,354 +40,667 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 
+interface WorkOrder {
+  id: string;
+  created_at: string;
+  title: string;
+  description: string;
+  status: 'open' | 'in_progress' | 'completed' | 'cancelled';
+  priority: 'high' | 'medium' | 'low';
+  client_id: string;
+  mechanic_id: string | null;
+  cost: number;
+  due_date: string;
+  is_warranty: boolean;
+}
+
 const AdminWorkOrders = () => {
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [editWorkOrder, setEditWorkOrder] = useState<WorkOrder | null>(null);
   const { toast } = useToast();
-  const [workOrders, setWorkOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedWorkOrder, setSelectedWorkOrder] = useState<any>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  
-  const [editFormData, setEditFormData] = useState({
-    order_number: "",
-    customer_notes: "",
-    internal_notes: "",
-    is_warranty: false,
-  });
-  
+  const [clients, setClients] = useState<{ id: string; first_name: string; last_name: string; }[]>([]);
+  const [mechanics, setMechanics] = useState<{ id: string; first_name: string; last_name: string; }[]>([]);
+
+  // Form state for creating/editing work orders
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [status, setStatus] = useState<WorkOrder['status']>("open");
+  const [priority, setPriority] = useState<WorkOrder['priority']>("medium");
+  const [clientId, setClientId] = useState("");
+  const [mechanicId, setMechanicId] = useState<string | null>(null);
+  const [cost, setCost] = useState<number>(0);
+  const [dueDate, setDueDate] = useState("");
+  const [isWarranty, setIsWarranty] = useState(false);
+
+  useEffect(() => {
+    fetchWorkOrders();
+    fetchClients();
+    fetchMechanics();
+  }, []);
+
   const fetchWorkOrders = async () => {
-    setLoading(true);
-    setError(null);
-    
     try {
       const { data, error } = await supabase
         .from('work_orders')
-        .select(`
-          *,
-          appointments(
-            *,
-            vehicles(*),
-            profiles(first_name, last_name)
-          ),
-          profiles(first_name, last_name),
-          order_status_updates(
-            *,
-            profiles(first_name, last_name)
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
-      
+
       if (error) {
-        throw error;
+        console.error("Error fetching work orders:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch work orders.",
+          variant: "destructive",
+        });
       }
-      
-      setWorkOrders(data || []);
-    } catch (err: any) {
-      setError(err);
+
+      if (data) {
+        setWorkOrders(data);
+      }
+    } catch (error) {
+      console.error("Unexpected error fetching work orders:", error);
       toast({
-        title: "Ошибка загрузки",
-        description: "Не удалось загрузить заказ-наряды",
+        title: "Error",
+        description: "An unexpected error occurred while fetching work orders.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
-  
-  useEffect(() => {
-    fetchWorkOrders();
-  }, []);
-  
-  const filteredWorkOrders = workOrders.filter(order => {
-    const searchTerm = searchQuery.toLowerCase();
-    return (
-      order.order_number?.toLowerCase().includes(searchTerm) ||
-      order.customer_notes?.toLowerCase().includes(searchTerm) ||
-      order.internal_notes?.toLowerCase().includes(searchTerm) ||
-      order.profiles?.first_name?.toLowerCase().includes(searchTerm) ||
-      order.profiles?.last_name?.toLowerCase().includes(searchTerm)
-    );
-  });
-  
-  const handleEditClick = (workOrder: any) => {
-    setSelectedWorkOrder(workOrder);
-    setEditFormData({
-      order_number: workOrder.order_number || "",
-      customer_notes: workOrder.customer_notes || "",
-      internal_notes: workOrder.internal_notes || "",
-      is_warranty: workOrder.is_warranty || false,
-    });
-    setIsEditDialogOpen(true);
+
+  const fetchClients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .eq('role', 'client');
+
+      if (error) {
+        console.error("Error fetching clients:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch clients.",
+          variant: "destructive",
+        });
+      }
+
+      if (data) {
+        setClients(data as { id: string; first_name: string; last_name: string; }[]);
+      }
+    } catch (error) {
+      console.error("Unexpected error fetching clients:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while fetching clients.",
+        variant: "destructive",
+      });
+    }
   };
-  
-  const handleDeleteClick = (workOrder: any) => {
-    setSelectedWorkOrder(workOrder);
-    setIsDeleteDialogOpen(true);
+
+  const fetchMechanics = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .eq('role', 'mechanic');
+
+      if (error) {
+        console.error("Error fetching mechanics:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch mechanics.",
+          variant: "destructive",
+        });
+      }
+
+      if (data) {
+        setMechanics(data as { id: string; first_name: string; last_name: string; }[]);
+      }
+    } catch (error) {
+      console.error("Unexpected error fetching mechanics:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while fetching mechanics.",
+        variant: "destructive",
+      });
+    }
   };
-  
-  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type, checked } = e.target;
-    setEditFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+
+  const createWorkOrder = async () => {
+    try {
+      const { error } = await supabase
+        .from('work_orders')
+        .insert({
+          title,
+          description,
+          status,
+          priority,
+          client_id: clientId,
+          mechanic_id: mechanicId,
+          cost,
+          due_date: dueDate,
+          is_warranty: isWarranty,
+        });
+
+      if (error) {
+        console.error("Error creating work order:", error);
+        toast({
+          title: "Error",
+          description: "Failed to create work order.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: "Work order created successfully.",
+      });
+      setOpen(false);
+      fetchWorkOrders();
+      clearForm();
+    } catch (error) {
+      console.error("Unexpected error creating work order:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while creating the work order.",
+        variant: "destructive",
+      });
+    }
   };
-  
-  const handleEditSubmit = async () => {
-    if (!selectedWorkOrder) return;
-    
-    setLoading(true);
+
+  const updateWorkOrder = async () => {
+    if (!editWorkOrder) return;
+
     try {
       const { error } = await supabase
         .from('work_orders')
         .update({
-          order_number: editFormData.order_number,
-          customer_notes: editFormData.customer_notes,
-          internal_notes: editFormData.internal_notes,
-          is_warranty: editFormData.is_warranty,
+          title,
+          description,
+          status,
+          priority,
+          client_id: clientId,
+          mechanic_id: mechanicId,
+          cost,
+          due_date: dueDate,
+          is_warranty: isWarranty,
         })
-        .eq('id', selectedWorkOrder.id);
-      
-      if (error) throw error;
-      
+        .eq('id', editWorkOrder.id);
+
+      if (error) {
+        console.error("Error updating work order:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update work order.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
-        title: "Успешно",
-        description: "Заказ-наряд успешно обновлен",
+        title: "Success",
+        description: "Work order updated successfully.",
       });
-      
-      setIsEditDialogOpen(false);
+      setEditWorkOrder(null);
       fetchWorkOrders();
-    } catch (err: any) {
-      console.error("Update error:", err);
+      clearForm();
+    } catch (error) {
+      console.error("Unexpected error updating work order:", error);
       toast({
-        title: "Ошибка",
-        description: "Не удалось обновить заказ-наряд",
+        title: "Error",
+        description: "An unexpected error occurred while updating the work order.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
-  
-  const handleDeleteConfirm = async () => {
-    if (!selectedWorkOrder) return;
-    
-    setLoading(true);
+
+  const deleteWorkOrder = async (id: string) => {
     try {
       const { error } = await supabase
         .from('work_orders')
         .delete()
-        .eq('id', selectedWorkOrder.id);
-      
-      if (error) throw error;
-      
+        .eq('id', id);
+
+      if (error) {
+        console.error("Error deleting work order:", error);
+        toast({
+          title: "Error",
+          description: "Failed to delete work order.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
-        title: "Успешно",
-        description: "Заказ-наряд успешно удален",
+        title: "Success",
+        description: "Work order deleted successfully.",
       });
-      
-      setIsDeleteDialogOpen(false);
       fetchWorkOrders();
-    } catch (err: any) {
-      console.error("Delete error:", err);
+    } catch (error) {
+      console.error("Unexpected error deleting work order:", error);
       toast({
-        title: "Ошибка",
-        description: "Не удалось удалить заказ-наряд",
+        title: "Error",
+        description: "An unexpected error occurred while deleting the work order.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
-  
+
+  const clearForm = () => {
+    setTitle("");
+    setDescription("");
+    setStatus("open");
+    setPriority("medium");
+    setClientId("");
+    setMechanicId(null);
+    setCost(0);
+    setDueDate("");
+    setIsWarranty(false);
+  };
+
+  const filteredWorkOrders = workOrders.filter((workOrder) =>
+    workOrder.title.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleOpenEditDialog = (workOrder: WorkOrder) => {
+    setEditWorkOrder(workOrder);
+    setTitle(workOrder.title);
+    setDescription(workOrder.description);
+    setStatus(workOrder.status);
+    setPriority(workOrder.priority);
+    setClientId(workOrder.client_id);
+    setMechanicId(workOrder.mechanic_id);
+    setCost(workOrder.cost);
+    setDueDate(workOrder.due_date);
+    setIsWarranty(workOrder.is_warranty);
+  };
+
   return (
     <div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Управление заказ-нарядами</CardTitle>
-          <CardDescription>Просмотр, редактирование и удаление заказ-нарядов.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4">
-            <Input
-              type="text"
-              placeholder="Поиск..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          
-          <ScrollArea>
-            <Table>
-              <TableCaption>Список всех заказ-нарядов в системе.</TableCaption>
-              <TableHead>
-                <TableRow>
-                  <TableHead>Номер заказа</TableHead>
-                  <TableHead>Клиент</TableHead>
-                  <TableHead>Дата создания</TableHead>
-                  <TableHead>Статус</TableHead>
-                  <TableHead className="text-right">Действия</TableHead>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center">Загрузка...</TableCell>
-                  </TableRow>
-                )}
-                {error && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-destructive">Ошибка: {error.message}</TableCell>
-                  </TableRow>
-                )}
-                {filteredWorkOrders.length === 0 && !loading && !error ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center">Нет данных</TableCell>
-                  </TableRow>
-                ) : (
-                  filteredWorkOrders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell>{order.order_number}</TableCell>
-                      <TableCell>
-                        {order.profiles?.first_name} {order.profiles?.last_name}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(order.created_at), "dd.MM.yyyy HH:mm")}
-                      </TableCell>
-                      <TableCell>
-                        {order.order_status_updates && order.order_status_updates.length > 0 ? (
-                          <Badge variant="secondary">
-                            {order.order_status_updates[0].status}
-                          </Badge>
-                        ) : (
-                          <Badge>Новый</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Открыть меню</span>
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Действия</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleEditClick(order)}>
-                              <Edit className="mr-2 h-4 w-4" /> Редактировать
-                            </DropdownMenuItem>
+      <div className="flex items-center justify-between mb-4">
+        <Input
+          type="text"
+          placeholder="Search work orders..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Work Order
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Create Work Order</DialogTitle>
+              <DialogDescription>
+                Add a new work order to the system.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="title" className="text-right">
+                  Title
+                </Label>
+                <Input
+                  type="text"
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="status" className="text-right">
+                  Status
+                </Label>
+                <Select value={status} onValueChange={(value) => setStatus(value as WorkOrder['status'])}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select a status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="priority" className="text-right">
+                  Priority
+                </Label>
+                <Select value={priority} onValueChange={(value) => setPriority(value as WorkOrder['priority'])}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select a priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="client" className="text-right">
+                  Client
+                </Label>
+                <Select value={clientId} onValueChange={setClientId}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select a client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.first_name} {client.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="mechanic" className="text-right">
+                  Mechanic
+                </Label>
+                <Select value={mechanicId || ""} onValueChange={(value) => setMechanicId(value === "" ? null : value)}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select a mechanic" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Unassigned</SelectItem>
+                    {mechanics.map((mechanic) => (
+                      <SelectItem key={mechanic.id} value={mechanic.id}>
+                        {mechanic.first_name} {mechanic.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="cost" className="text-right">
+                  Cost
+                </Label>
+                <Input
+                  type="number"
+                  id="cost"
+                  value={cost}
+                  onChange={(e) => setCost(Number(e.target.value))}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="dueDate" className="text-right">
+                  Due Date
+                </Label>
+                <Input
+                  type="date"
+                  id="dueDate"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="isWarranty" className="text-right">
+                  Warranty
+                </Label>
+                <Checkbox
+                  id="isWarranty"
+                  checked={isWarranty}
+                  onCheckedChange={(e) => setIsWarranty((e.target as HTMLInputElement).checked)}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={() => { setOpen(false); clearForm(); }}>
+                Cancel
+              </Button>
+              <Button type="submit" onClick={createWorkOrder}>Create</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Table>
+        <TableCaption>A list of your work orders.</TableCaption>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Title</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Priority</TableHead>
+            <TableHead>Client</TableHead>
+            <TableHead>Mechanic</TableHead>
+            <TableHead>Due Date</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredWorkOrders.map((workOrder) => {
+            const client = clients.find(c => c.id === workOrder.client_id);
+            const mechanic = mechanics.find(m => m.id === workOrder.mechanic_id);
+
+            return (
+              <TableRow key={workOrder.id}>
+                <TableCell>{workOrder.title}</TableCell>
+                <TableCell>{workOrder.status}</TableCell>
+                <TableCell>{workOrder.priority}</TableCell>
+                <TableCell>{client ? `${client.first_name} ${client.last_name}` : "N/A"}</TableCell>
+                <TableCell>{mechanic ? `${mechanic.first_name} ${mechanic.last_name}` : "Unassigned"}</TableCell>
+                <TableCell>{workOrder.due_date}</TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => handleOpenEditDialog(workOrder)}>
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
                             <DropdownMenuItem>
-                              <Copy className="mr-2 h-4 w-4" /> Копировать
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleDeleteClick(order)} className="text-red-500">
-                              <Trash className="mr-2 h-4 w-4" /> Удалить
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        </CardContent>
-      </Card>
-      
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the work order from our servers.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteWorkOrder(workOrder.id)}>Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+        <TableFooter>
+          <TableRow>
+            <TableCell colSpan={7}>
+              {filteredWorkOrders.length} work order(s) total
+            </TableCell>
+          </TableRow>
+        </TableFooter>
+      </Table>
+
+      {/* Edit Work Order Dialog */}
+      <Dialog open={!!editWorkOrder} onOpenChange={() => setEditWorkOrder(null)}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Редактировать заказ-наряд</DialogTitle>
+            <DialogTitle>Edit Work Order</DialogTitle>
             <DialogDescription>
-              Измените необходимые поля и сохраните.
+              Edit the details of the selected work order.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="order_number" className="text-right">
-                Номер заказа
+              <Label htmlFor="title" className="text-right">
+                Title
               </Label>
               <Input
-                id="order_number"
-                name="order_number"
-                value={editFormData.order_number}
-                onChange={handleEditFormChange}
+                type="text"
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="customer_notes" className="text-right">
-                Заметки клиента
+              <Label htmlFor="description" className="text-right">
+                Description
               </Label>
               <Textarea
-                id="customer_notes"
-                name="customer_notes"
-                value={editFormData.customer_notes}
-                onChange={handleEditFormChange}
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
                 className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="internal_notes" className="text-right">
-                Внутренние заметки
+              <Label htmlFor="status" className="text-right">
+                Status
               </Label>
-              <Textarea
-                id="internal_notes"
-                name="internal_notes"
-                value={editFormData.internal_notes}
-                onChange={handleEditFormChange}
+              <Select value={status} onValueChange={(value) => setStatus(value as WorkOrder['status'])}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="open">Open</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="priority" className="text-right">
+                Priority
+              </Label>
+              <Select value={priority} onValueChange={(value) => setPriority(value as WorkOrder['priority'])}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="client" className="text-right">
+                Client
+              </Label>
+              <Select value={clientId} onValueChange={setClientId}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.first_name} {client.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="mechanic" className="text-right">
+                Mechanic
+              </Label>
+              <Select value={mechanicId || ""} onValueChange={(value) => setMechanicId(value === "" ? null : value)}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a mechanic" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Unassigned</SelectItem>
+                  {mechanics.map((mechanic) => (
+                    <SelectItem key={mechanic.id} value={mechanic.id}>
+                      {mechanic.first_name} {mechanic.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="cost" className="text-right">
+                Cost
+              </Label>
+              <Input
+                type="number"
+                id="cost"
+                value={cost}
+                onChange={(e) => setCost(Number(e.target.value))}
                 className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="is_warranty" className="text-right">
-                Гарантия
+              <Label htmlFor="dueDate" className="text-right">
+                Due Date
+              </Label>
+              <Input
+                type="date"
+                id="dueDate"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="isWarranty" className="text-right">
+                Warranty
               </Label>
               <Checkbox
-                id="is_warranty"
-                name="is_warranty"
-                checked={editFormData.is_warranty}
-                onCheckedChange={(checked) => setEditFormData(prev => ({ ...prev, is_warranty: !!checked }))}
+                id="isWarranty"
+                checked={isWarranty}
+                onCheckedChange={(e) => (e.target as HTMLInputElement).checked ? setIsWarranty(true) : setIsWarranty(false)}
                 className="col-span-3"
               />
             </div>
           </div>
-          <Button onClick={handleEditSubmit} disabled={loading}>
-            {loading ? "Сохранение..." : "Сохранить"}
-          </Button>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Delete Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Удалить заказ-наряд</DialogTitle>
-            <DialogDescription>
-              Вы уверены, что хотите удалить этот заказ-наряд? Это действие необратимо.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <p>Вы действительно хотите удалить заказ-наряд номер {selectedWorkOrder?.order_number}?</p>
-          </div>
-          <div className="flex justify-end space-x-2">
-            <Button variant="secondary" onClick={() => setIsDeleteDialogOpen(false)}>
-              Отмена
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => { setEditWorkOrder(null); clearForm(); }}>
+              Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm} disabled={loading}>
-              {loading ? "Удаление..." : "Удалить"}
-            </Button>
-          </div>
+            <Button type="submit" onClick={updateWorkOrder}>Update</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

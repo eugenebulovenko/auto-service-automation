@@ -1,6 +1,6 @@
 
 import MainLayout from "@/layouts/MainLayout";
-import AuthForm from "@/components/AuthForm";
+import AuthForm from "@/components/auth/AuthForm"; // Updated import path
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 
