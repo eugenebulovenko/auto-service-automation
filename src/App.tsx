@@ -15,6 +15,11 @@ import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import MechanicDashboard from "./pages/mechanic/MechanicDashboard";
 import NotFound from "./pages/NotFound";
+import About from "./pages/About";
+import Team from "./pages/Team";
+import Career from "./pages/Career";
+import Contacts from "./pages/Contacts";
+import UsefulLinks from "./pages/UsefulLinks";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +34,11 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/team" element={<Team />} />
+            <Route path="/career" element={<Career />} />
+            <Route path="/contacts" element={<Contacts />} />
+            <Route path="/useful-links" element={<UsefulLinks />} />
             
             {/* Защищенные маршруты для клиентов */}
             <Route path="/booking" element={

@@ -1,20 +1,66 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MainLayout from "@/layouts/MainLayout";
 import ServiceTracker from "@/components/ServiceTracker";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const ServiceTracking = () => {
+  const { toast } = useToast();
   const [orderNumber, setOrderNumber] = useState("");
   const [isTracking, setIsTracking] = useState(false);
+  const [workOrder, setWorkOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (orderNumber.trim()) {
-      setIsTracking(true);
+    if (!orderNumber.trim()) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('work_orders')
+        .select(`
+          *,
+          appointments(
+            *,
+            vehicles(*),
+            profiles(first_name, last_name)
+          ),
+          profiles(first_name, last_name),
+          order_status_updates(
+            *,
+            profiles(first_name, last_name)
+          )
+        `)
+        .eq('order_number', orderNumber.trim())
+        .single();
+      
+      if (error) throw error;
+      
+      if (data) {
+        setWorkOrder(data);
+        setIsTracking(true);
+      } else {
+        toast({
+          title: "Заказ не найден",
+          description: "Проверьте номер заказ-наряда и попробуйте снова",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching work order:", error);
+      toast({
+        title: "Ошибка поиска",
+        description: "Не удалось найти информацию по указанному номеру заказа",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -42,7 +88,13 @@ const ServiceTracking = () => {
                     onChange={(e) => setOrderNumber(e.target.value)}
                   />
                 </div>
-                <Button type="submit" className="w-full">Отследить</Button>
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={loading || !orderNumber.trim()}
+                >
+                  {loading ? "Поиск..." : "Отследить"}
+                </Button>
               </form>
             </div>
           ) : (
@@ -59,7 +111,7 @@ const ServiceTracking = () => {
                   Заказ: <span className="font-medium">{orderNumber}</span>
                 </span>
               </div>
-              <ServiceTracker />
+              <ServiceTracker workOrder={workOrder} />
             </>
           )}
         </div>
