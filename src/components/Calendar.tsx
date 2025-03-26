@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import {
   CarFront, 
   Wrench 
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const timeSlots = [
   "09:00", "10:00", "11:00", "12:00", 
@@ -40,6 +40,17 @@ const BookingCalendar = () => {
     year: "",
     vin: ""
   });
+
+  // Get service ID from URL query parameter
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const serviceId = params.get('service');
+    if (serviceId) {
+      setSelectedServices([serviceId]);
+      // If service is pre-selected, start from time selection
+      setCurrentStep("date");
+    }
+  }, []);
 
   const handleServiceToggle = (serviceId: string) => {
     setSelectedServices(prev => 
@@ -144,6 +155,135 @@ const BookingCalendar = () => {
     const isSunday = day === 0;
     
     return date < today || isSunday;
+  };
+
+  const handleSubmitBooking = async () => {
+    try {
+      if (!date || !time || selectedServices.length === 0) {
+        toast({
+          title: "Недостаточно данных",
+          description: "Пожалуйста, заполните все необходимые поля",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Get current authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Требуется авторизация",
+          description: "Пожалуйста, войдите в систему чтобы записаться на сервис",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // First create or get vehicle for this user
+      let vehicleId: string;
+      
+      // Check if vehicle exists
+      const { data: existingVehicles } = await supabase
+        .from('vehicles')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('make', carInfo.make)
+        .eq('model', carInfo.model)
+        .eq('year', carInfo.year)
+        .maybeSingle();
+
+      if (existingVehicles?.id) {
+        vehicleId = existingVehicles.id;
+      } else {
+        // Create new vehicle
+        const { data: newVehicle, error: vehicleError } = await supabase
+          .from('vehicles')
+          .insert({
+            user_id: user.id,
+            make: carInfo.make,
+            model: carInfo.model,
+            year: parseInt(carInfo.year),
+            vin: carInfo.vin || null
+          })
+          .select('id')
+          .single();
+
+        if (vehicleError) throw vehicleError;
+        vehicleId = newVehicle.id;
+      }
+
+      // Calculate total price
+      const totalPrice = getTotalPrice();
+
+      // Create appointment
+      const appointmentDate = new Date(date);
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .insert({
+          user_id: user.id,
+          vehicle_id: vehicleId,
+          appointment_date: appointmentDate.toISOString().split('T')[0],
+          start_time: time,
+          end_time: calculateEndTime(time, getTotalDuration()),
+          total_price: totalPrice,
+          status: 'pending'
+        })
+        .select('id')
+        .single();
+
+      if (appointmentError) throw appointmentError;
+
+      // Create appointment services
+      const appointmentServices = selectedServices.map(serviceId => {
+        const service = services.find(s => s.id === serviceId);
+        return {
+          appointment_id: appointment.id,
+          service_id: serviceId,
+          price: service?.price || 0
+        };
+      });
+
+      const { error: servicesError } = await supabase
+        .from('appointment_services')
+        .insert(appointmentServices);
+
+      if (servicesError) throw servicesError;
+
+      // Show success message
+      toast({
+        title: "Запись создана!",
+        description: `Вы успешно записаны на ${appointmentDate.toLocaleDateString('ru-RU')} в ${time}`,
+      });
+      
+      // Reset form
+      setDate(undefined);
+      setTime(null);
+      setSelectedServices([]);
+      setCurrentStep("date");
+      setCarInfo({ make: "", model: "", year: "", vin: "" });
+      
+      // Redirect to dashboard
+      window.location.href = '/dashboard';
+      
+    } catch (error) {
+      console.error('Booking error:', error);
+      toast({
+        title: "Ошибка при создании записи",
+        description: "Не удалось создать запись. Пожалуйста, попробуйте позже.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Calculate end time based on start time and duration
+  const calculateEndTime = (startTime: string, durationMinutes: number) => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const startDate = new Date();
+    startDate.setHours(hours, minutes, 0, 0);
+    
+    const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
+    return `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
   };
 
   const renderStepContent = () => {
@@ -359,7 +499,7 @@ const BookingCalendar = () => {
         </Button>
         
         <Button 
-          onClick={handleNextStep}
+          onClick={currentStep === "confirm" ? handleSubmitBooking : handleNextStep}
           className="flex items-center gap-2"
         >
           {currentStep === "confirm" ? "Записаться" : "Далее"}
