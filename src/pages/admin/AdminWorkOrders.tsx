@@ -40,6 +40,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -69,7 +70,6 @@ const AdminWorkOrders = () => {
   const [clients, setClients] = useState<{ id: string; first_name: string; last_name: string; }[]>([]);
   const [mechanics, setMechanics] = useState<{ id: string; first_name: string; last_name: string; }[]>([]);
 
-  // Form state for creating/editing work orders
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<WorkOrder['status']>("open");
@@ -79,6 +79,10 @@ const AdminWorkOrders = () => {
   const [cost, setCost] = useState<number>(0);
   const [dueDate, setDueDate] = useState("");
   const [isWarranty, setIsWarranty] = useState(false);
+
+  const handleCheckboxChange = (checked: boolean) => {
+    setIsWarranty(checked);
+  };
 
   useEffect(() => {
     fetchWorkOrders();
@@ -464,12 +468,13 @@ const AdminWorkOrders = () => {
                 <Label htmlFor="isWarranty" className="text-right">
                   Warranty
                 </Label>
-                <Checkbox
-                  id="isWarranty"
-                  checked={isWarranty}
-                  onCheckedChange={(e) => setIsWarranty((e.target as HTMLInputElement).checked)}
-                  className="col-span-3"
-                />
+                <div className="col-span-3">
+                  <Checkbox
+                    id="isWarranty"
+                    checked={isWarranty}
+                    onCheckedChange={handleCheckboxChange}
+                  />
+                </div>
               </div>
             </div>
             <DialogFooter>
@@ -560,7 +565,6 @@ const AdminWorkOrders = () => {
         </TableFooter>
       </Table>
 
-      {/* Edit Work Order Dialog */}
       <Dialog open={!!editWorkOrder} onOpenChange={() => setEditWorkOrder(null)}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -687,12 +691,13 @@ const AdminWorkOrders = () => {
               <Label htmlFor="isWarranty" className="text-right">
                 Warranty
               </Label>
-              <Checkbox
-                id="isWarranty"
-                checked={isWarranty}
-                onCheckedChange={(e) => (e.target as HTMLInputElement).checked ? setIsWarranty(true) : setIsWarranty(false)}
-                className="col-span-3"
-              />
+              <div className="col-span-3">
+                <Checkbox
+                  id="isWarranty"
+                  checked={isWarranty}
+                  onCheckedChange={handleCheckboxChange}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
