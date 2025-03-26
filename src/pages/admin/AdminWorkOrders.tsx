@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Table,
@@ -47,18 +48,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 
+// Updated interface to match the database schema
 interface WorkOrder {
   id: string;
   created_at: string;
-  title: string;
-  description: string;
-  status: 'open' | 'in_progress' | 'completed' | 'cancelled';
-  priority: 'high' | 'medium' | 'low';
-  client_id: string;
+  order_number: string;
+  status: string;
+  total_cost: number | null;
   mechanic_id: string | null;
-  cost: number;
-  due_date: string;
-  is_warranty: boolean;
+  appointment_id: string | null;
+  start_date: string | null;
+  completion_date: string | null;
+  updated_at: string | null;
+  // Additional fields for UI that aren't in the DB table
+  title?: string;
+  description?: string;
+  priority?: 'high' | 'medium' | 'low';
+  client_id?: string;
+  cost?: number;
+  due_date?: string;
+  is_warranty?: boolean;
 }
 
 const AdminWorkOrders = () => {
@@ -70,14 +79,17 @@ const AdminWorkOrders = () => {
   const [clients, setClients] = useState<{ id: string; first_name: string; last_name: string; }[]>([]);
   const [mechanics, setMechanics] = useState<{ id: string; first_name: string; last_name: string; }[]>([]);
 
+  // Form state for creating/editing work orders
+  const [orderNumber, setOrderNumber] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [status, setStatus] = useState<WorkOrder['status']>("open");
-  const [priority, setPriority] = useState<WorkOrder['priority']>("medium");
+  const [status, setStatus] = useState("open");
+  const [priority, setPriority] = useState<'high' | 'medium' | 'low'>("medium");
   const [clientId, setClientId] = useState("");
   const [mechanicId, setMechanicId] = useState<string | null>(null);
-  const [cost, setCost] = useState<number>(0);
-  const [dueDate, setDueDate] = useState("");
+  const [totalCost, setTotalCost] = useState<number>(0);
+  const [startDate, setStartDate] = useState("");
+  const [completionDate, setCompletionDate] = useState("");
   const [isWarranty, setIsWarranty] = useState(false);
 
   const handleCheckboxChange = (checked: boolean) => {
@@ -179,18 +191,18 @@ const AdminWorkOrders = () => {
 
   const createWorkOrder = async () => {
     try {
+      // Generate a simple order number if not provided
+      const generatedOrderNumber = orderNumber || `WO-${Date.now().toString().slice(-6)}`;
+      
       const { error } = await supabase
         .from('work_orders')
         .insert({
-          title,
-          description,
-          status,
-          priority,
-          client_id: clientId,
+          order_number: generatedOrderNumber,
+          status: status,
           mechanic_id: mechanicId,
-          cost,
-          due_date: dueDate,
-          is_warranty: isWarranty,
+          total_cost: totalCost,
+          start_date: startDate || null,
+          completion_date: completionDate || null,
         });
 
       if (error) {
@@ -227,15 +239,12 @@ const AdminWorkOrders = () => {
       const { error } = await supabase
         .from('work_orders')
         .update({
-          title,
-          description,
-          status,
-          priority,
-          client_id: clientId,
+          order_number: orderNumber,
+          status: status,
           mechanic_id: mechanicId,
-          cost,
-          due_date: dueDate,
-          is_warranty: isWarranty,
+          total_cost: totalCost,
+          start_date: startDate || null,
+          completion_date: completionDate || null,
         })
         .eq('id', editWorkOrder.id);
 
@@ -299,32 +308,38 @@ const AdminWorkOrders = () => {
   };
 
   const clearForm = () => {
+    setOrderNumber("");
     setTitle("");
     setDescription("");
     setStatus("open");
     setPriority("medium");
     setClientId("");
     setMechanicId(null);
-    setCost(0);
-    setDueDate("");
+    setTotalCost(0);
+    setStartDate("");
+    setCompletionDate("");
     setIsWarranty(false);
   };
 
   const filteredWorkOrders = workOrders.filter((workOrder) =>
-    workOrder.title.toLowerCase().includes(search.toLowerCase())
+    workOrder.order_number?.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleOpenEditDialog = (workOrder: WorkOrder) => {
     setEditWorkOrder(workOrder);
-    setTitle(workOrder.title);
-    setDescription(workOrder.description);
+    setOrderNumber(workOrder.order_number);
     setStatus(workOrder.status);
-    setPriority(workOrder.priority);
-    setClientId(workOrder.client_id);
     setMechanicId(workOrder.mechanic_id);
-    setCost(workOrder.cost);
-    setDueDate(workOrder.due_date);
-    setIsWarranty(workOrder.is_warranty);
+    setTotalCost(workOrder.total_cost || 0);
+    setStartDate(workOrder.start_date || "");
+    setCompletionDate(workOrder.completion_date || "");
+    
+    // Set UI-only fields if they exist
+    setTitle(workOrder.title || "");
+    setDescription(workOrder.description || "");
+    setPriority(workOrder.priority || "medium");
+    setClientId(workOrder.client_id || "");
+    setIsWarranty(workOrder.is_warranty || false);
   };
 
   return (
@@ -352,6 +367,19 @@ const AdminWorkOrders = () => {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="orderNumber" className="text-right">
+                  Order Number
+                </Label>
+                <Input
+                  type="text"
+                  id="orderNumber"
+                  value={orderNumber}
+                  onChange={(e) => setOrderNumber(e.target.value)}
+                  placeholder="Auto-generated if empty"
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="title" className="text-right">
                   Title
                 </Label>
@@ -378,7 +406,7 @@ const AdminWorkOrders = () => {
                 <Label htmlFor="status" className="text-right">
                   Status
                 </Label>
-                <Select value={status} onValueChange={(value) => setStatus(value as WorkOrder['status'])}>
+                <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Select a status" />
                   </SelectTrigger>
@@ -394,7 +422,7 @@ const AdminWorkOrders = () => {
                 <Label htmlFor="priority" className="text-right">
                   Priority
                 </Label>
-                <Select value={priority} onValueChange={(value) => setPriority(value as WorkOrder['priority'])}>
+                <Select value={priority} onValueChange={(value) => setPriority(value as 'high' | 'medium' | 'low')}>
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Select a priority" />
                   </SelectTrigger>
@@ -441,26 +469,38 @@ const AdminWorkOrders = () => {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="cost" className="text-right">
-                  Cost
+                <Label htmlFor="totalCost" className="text-right">
+                  Total Cost
                 </Label>
                 <Input
                   type="number"
-                  id="cost"
-                  value={cost}
-                  onChange={(e) => setCost(Number(e.target.value))}
+                  id="totalCost"
+                  value={totalCost}
+                  onChange={(e) => setTotalCost(Number(e.target.value))}
                   className="col-span-3"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="dueDate" className="text-right">
-                  Due Date
+                <Label htmlFor="startDate" className="text-right">
+                  Start Date
                 </Label>
                 <Input
                   type="date"
-                  id="dueDate"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  id="startDate"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="completionDate" className="text-right">
+                  Completion Date
+                </Label>
+                <Input
+                  type="date"
+                  id="completionDate"
+                  value={completionDate}
+                  onChange={(e) => setCompletionDate(e.target.value)}
                   className="col-span-3"
                 />
               </div>
@@ -491,28 +531,27 @@ const AdminWorkOrders = () => {
         <TableCaption>A list of your work orders.</TableCaption>
         <TableHeader>
           <TableRow>
-            <TableHead>Title</TableHead>
+            <TableHead>Order Number</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Priority</TableHead>
-            <TableHead>Client</TableHead>
             <TableHead>Mechanic</TableHead>
-            <TableHead>Due Date</TableHead>
+            <TableHead>Start Date</TableHead>
+            <TableHead>Completion Date</TableHead>
+            <TableHead>Total Cost</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredWorkOrders.map((workOrder) => {
-            const client = clients.find(c => c.id === workOrder.client_id);
             const mechanic = mechanics.find(m => m.id === workOrder.mechanic_id);
 
             return (
               <TableRow key={workOrder.id}>
-                <TableCell>{workOrder.title}</TableCell>
+                <TableCell>{workOrder.order_number}</TableCell>
                 <TableCell>{workOrder.status}</TableCell>
-                <TableCell>{workOrder.priority}</TableCell>
-                <TableCell>{client ? `${client.first_name} ${client.last_name}` : "N/A"}</TableCell>
                 <TableCell>{mechanic ? `${mechanic.first_name} ${mechanic.last_name}` : "Unassigned"}</TableCell>
-                <TableCell>{workOrder.due_date}</TableCell>
+                <TableCell>{workOrder.start_date || "Not started"}</TableCell>
+                <TableCell>{workOrder.completion_date || "Not completed"}</TableCell>
+                <TableCell>${workOrder.total_cost || 0}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -575,6 +614,18 @@ const AdminWorkOrders = () => {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="orderNumber" className="text-right">
+                Order Number
+              </Label>
+              <Input
+                type="text"
+                id="orderNumber"
+                value={orderNumber}
+                onChange={(e) => setOrderNumber(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="title" className="text-right">
                 Title
               </Label>
@@ -601,7 +652,7 @@ const AdminWorkOrders = () => {
               <Label htmlFor="status" className="text-right">
                 Status
               </Label>
-              <Select value={status} onValueChange={(value) => setStatus(value as WorkOrder['status'])}>
+              <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select a status" />
                 </SelectTrigger>
@@ -617,7 +668,7 @@ const AdminWorkOrders = () => {
               <Label htmlFor="priority" className="text-right">
                 Priority
               </Label>
-              <Select value={priority} onValueChange={(value) => setPriority(value as WorkOrder['priority'])}>
+              <Select value={priority} onValueChange={(value) => setPriority(value as 'high' | 'medium' | 'low')}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select a priority" />
                 </SelectTrigger>
@@ -664,26 +715,38 @@ const AdminWorkOrders = () => {
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="cost" className="text-right">
-                Cost
+              <Label htmlFor="totalCost" className="text-right">
+                Total Cost
               </Label>
               <Input
                 type="number"
-                id="cost"
-                value={cost}
-                onChange={(e) => setCost(Number(e.target.value))}
+                id="totalCost"
+                value={totalCost}
+                onChange={(e) => setTotalCost(Number(e.target.value))}
                 className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="dueDate" className="text-right">
-                Due Date
+              <Label htmlFor="startDate" className="text-right">
+                Start Date
               </Label>
               <Input
                 type="date"
-                id="dueDate"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                id="startDate"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="completionDate" className="text-right">
+                Completion Date
+              </Label>
+              <Input
+                type="date"
+                id="completionDate"
+                value={completionDate}
+                onChange={(e) => setCompletionDate(e.target.value)}
                 className="col-span-3"
               />
             </div>
