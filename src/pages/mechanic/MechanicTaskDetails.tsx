@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Plus, Package } from "lucide-react"; // Removed 'Tool' which doesn't exist
+import { Camera, Plus, Package, CheckSquare } from "lucide-react";
+import QualityCheck from "@/components/mechanic/QualityCheck";
 
-// Define the WorkOrder interface with proper types
 interface WorkOrder {
   id: string;
   order_number: string;
@@ -18,7 +17,7 @@ interface WorkOrder {
   created_at: string | null;
   updated_at: string | null;
   appointment_id: string | null;
-  vehicle_id: string | null; // Ensure this is included
+  vehicle_id: string | null;
   photos?: { url: string; id: string }[];
   services?: any[];
   parts?: { id: string; name: string; price: number; quantity: number }[];
@@ -32,6 +31,7 @@ const MechanicTaskDetails = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [newStatus, setNewStatus] = useState<string>("");
   const [showPartForm, setShowPartForm] = useState(false);
+  const [showQualityCheck, setShowQualityCheck] = useState(false);
   const [partForm, setPartForm] = useState({
     name: "",
     price: "",
@@ -59,7 +59,6 @@ const MechanicTaskDetails = () => {
       
       if (error) throw error;
 
-      // Get services for this order
       const { data: servicesData, error: servicesError } = await supabase
         .from("appointment_services")
         .select(`
@@ -72,7 +71,6 @@ const MechanicTaskDetails = () => {
       
       if (servicesError) throw servicesError;
 
-      // Get parts for this order
       const { data: partsData, error: partsError } = await supabase
         .from("order_parts")
         .select("*")
@@ -80,34 +78,29 @@ const MechanicTaskDetails = () => {
       
       if (partsError) throw partsError;
 
-      // Transform services data
       const services = servicesData || [];
       
-      // Transform parts data and handle the correct properties
       const parts = (partsData || []).map(part => ({
         id: part.id,
-        name: part.part_id, // From the 'parts' table via part_id
+        name: part.part_id,
         price: part.price,
         quantity: part.quantity
       }));
 
-      // Transform photos data
       const photos = workOrderData.photos ? 
         workOrderData.photos.map((p: any) => ({
           id: p.id,
           url: p.photo_url
         })) : [];
 
-      // Create a complete work order object with all required fields
       const completeWorkOrder: WorkOrder = {
         ...workOrderData,
         services,
         parts,
         photos,
-        vehicle_id: null // Initialize with null, we'll fetch this separately
+        vehicle_id: null
       };
 
-      // Get the vehicle_id from the appointment if it exists
       if (workOrderData.appointment_id) {
         const { data: appointmentData } = await supabase
           .from("appointments")
@@ -168,12 +161,10 @@ const MechanicTaskDetails = () => {
       
       setUploadingPhoto(true);
       
-      // Generate unique file name
       const fileExt = file.name.split(".").pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       const filePath = `work_orders/${workOrder.id}/${fileName}`;
       
-      // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from("work_photos")
         .upload(filePath, file, {
@@ -182,12 +173,10 @@ const MechanicTaskDetails = () => {
       
       if (uploadError) throw uploadError;
       
-      // Get public URL
       const { data: publicUrl } = supabase.storage
         .from("work_photos")
         .getPublicUrl(filePath);
       
-      // Save reference in database using repair_photos table
       const { error: dbError } = await supabase
         .from("repair_photos")
         .insert({
@@ -204,7 +193,6 @@ const MechanicTaskDetails = () => {
         description: "Фото успешно добавлено к заказу"
       });
       
-      // Refresh data
       fetchWorkOrder();
     } catch (error) {
       console.error("Error uploading photo:", error);
@@ -234,12 +222,11 @@ const MechanicTaskDetails = () => {
         return;
       }
       
-      // Use order_parts table instead of work_order_parts
       const { error } = await supabase
         .from("order_parts")
         .insert({
           work_order_id: workOrder.id,
-          part_id: partForm.name, // This should be a valid part_id from parts table
+          part_id: partForm.name,
           price,
           quantity
         });
@@ -251,11 +238,9 @@ const MechanicTaskDetails = () => {
         description: "Запчасть успешно добавлена к заказу"
       });
       
-      // Reset form
       setPartForm({ name: "", price: "", quantity: "1" });
       setShowPartForm(false);
       
-      // Refresh data
       fetchWorkOrder();
     } catch (error) {
       console.error("Error adding part:", error);
@@ -267,8 +252,35 @@ const MechanicTaskDetails = () => {
     }
   };
 
-  // Rest of the component implementation...
-  // This is a placeholder, the actual implementation would depend on the component's UI requirements
+  const handleQualityCheckComplete = () => {
+    setShowQualityCheck(false);
+    fetchWorkOrder();
+    toast({
+      title: "Проверка качества завершена",
+      description: "Результаты проверки сохранены"
+    });
+  };
+
+  const renderActionButtons = () => {
+    if (!workOrder) return null;
+    
+    const canSendToQualityCheck = 
+      workOrder.status === "in_progress" || 
+      workOrder.status === "completed";
+    
+    return (
+      <div className="flex flex-wrap gap-3 mt-6">
+        <Button 
+          onClick={() => setShowQualityCheck(true)}
+          disabled={!canSendToQualityCheck}
+          className="flex items-center"
+        >
+          <CheckSquare className="h-4 w-4 mr-2" />
+          Проверка качества
+        </Button>
+      </div>
+    );
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -277,7 +289,15 @@ const MechanicTaskDetails = () => {
       ) : workOrder ? (
         <div>
           <h1>Work Order Details</h1>
-          {/* Render work order details */}
+          {showQualityCheck && workOrder && (
+            <div className="mt-6">
+              <QualityCheck 
+                workOrderId={workOrder.id} 
+                onComplete={handleQualityCheckComplete} 
+              />
+            </div>
+          )}
+          {renderActionButtons()}
         </div>
       ) : (
         <div>Work order not found</div>

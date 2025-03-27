@@ -4,7 +4,7 @@ import { Routes, Route, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   Users, Calendar, ClipboardList, Wrench, BarChart3, Settings, 
-  ChevronRight, ChevronLeft, LogOut 
+  ChevronRight, ChevronLeft, LogOut, Gift
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AdminHome from "./AdminHome";
@@ -14,6 +14,7 @@ import AdminClients from "./AdminClients";
 import AdminMechanics from "./AdminMechanics";
 import AdminParts from "./AdminParts";
 import AdminReports from "./AdminReports";
+import AdminLoyalty from "./AdminLoyalty";
 
 const AdminDashboard = () => {
   const { signOut, profile } = useAuth();
@@ -27,6 +28,7 @@ const AdminDashboard = () => {
     { name: "Клиенты", path: "/admin/clients", icon: <Users className="h-5 w-5" /> },
     { name: "Механики", path: "/admin/mechanics", icon: <Wrench className="h-5 w-5" /> },
     { name: "Запчасти", path: "/admin/parts", icon: <Settings className="h-5 w-5" /> },
+    { name: "Программы лояльности", path: "/admin/loyalty", icon: <Gift className="h-5 w-5" /> },
     { name: "Отчеты", path: "/admin/reports", icon: <BarChart3 className="h-5 w-5" /> },
   ];
 
@@ -115,6 +117,7 @@ const AdminDashboard = () => {
             <Route path="/clients" element={<AdminClients />} />
             <Route path="/mechanics" element={<AdminMechanics />} />
             <Route path="/parts" element={<AdminParts />} />
+            <Route path="/loyalty" element={<AdminLoyalty />} />
             <Route path="/reports" element={<AdminReports />} />
           </Routes>
         </div>
