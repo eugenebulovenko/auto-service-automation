@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronRight } from "lucide-react";
@@ -140,7 +139,7 @@ const BookingCalendar = () => {
         .eq('user_id', user.id)
         .eq('make', carInfo.make)
         .eq('model', carInfo.model)
-        .eq('year', carInfo.year)
+        .eq('year', Number(carInfo.year)) // Convert string to number here
         .maybeSingle();
 
       if (existingVehicles?.id) {
@@ -153,7 +152,7 @@ const BookingCalendar = () => {
             user_id: user.id,
             make: carInfo.make,
             model: carInfo.model,
-            year: parseInt(carInfo.year), // Convert string to number here
+            year: Number(carInfo.year), // Convert string to number here
             vin: carInfo.vin || null
           })
           .select('id')
