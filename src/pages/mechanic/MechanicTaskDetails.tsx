@@ -3,24 +3,24 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Plus, Tool, Package } from "lucide-react";
+import { Camera, Plus, Package } from "lucide-react"; // Removed 'Tool' which doesn't exist
 
-// Fix the WorkOrder interface to include vehicle_id
+// Define the WorkOrder interface with proper types
 interface WorkOrder {
   id: string;
   order_number: string;
   status: string;
   start_date: string | null;
   completion_date: string | null;
-  total_cost: number;
+  total_cost: number | null;
   mechanic_id: string | null;
   created_at: string | null;
   updated_at: string | null;
   appointment_id: string | null;
-  vehicle_id: string | null; // Add this missing property
+  vehicle_id: string | null; // Ensure this is included
   photos?: { url: string; id: string }[];
-  services?: any;
-  parts?: { id: any; name: any; price: any; quantity: any }[];
+  services?: any[];
+  parts?: { id: string; name: string; price: number; quantity: number }[];
 }
 
 const MechanicTaskDetails = () => {
@@ -51,7 +51,7 @@ const MechanicTaskDetails = () => {
         .from("work_orders")
         .select(`
           *,
-          photos:work_order_photos(id, url)
+          photos:repair_photos(id, photo_url)
         `)
         .eq("id", id)
         .single();
@@ -73,28 +73,36 @@ const MechanicTaskDetails = () => {
 
       // Get parts for this order
       const { data: partsData, error: partsError } = await supabase
-        .from("work_order_parts")
+        .from("order_parts")
         .select("*")
         .eq("work_order_id", id);
       
       if (partsError) throw partsError;
 
-      // Safely transform services data
+      // Transform services data
       const services = servicesData || [];
       
-      // Safely transform parts data
+      // Transform parts data and handle the correct properties
       const parts = (partsData || []).map(part => ({
         id: part.id,
-        name: part.part_name,
+        name: part.part_id, // From the 'parts' table via part_id
         price: part.price,
         quantity: part.quantity
       }));
+
+      // Transform photos data
+      const photos = workOrderData.photos ? 
+        workOrderData.photos.map((p: any) => ({
+          id: p.id,
+          url: p.photo_url
+        })) : [];
 
       setWorkOrder({
         ...workOrderData,
         services,
         parts,
-        vehicle_id: workOrderData.vehicle_id || null // Ensure vehicle_id is present
+        photos,
+        vehicle_id: workOrderData.vehicle_id || null
       });
       
       setNewStatus(workOrderData.status);
@@ -154,7 +162,6 @@ const MechanicTaskDetails = () => {
         .from("work_photos")
         .upload(filePath, file, {
           cacheControl: "3600",
-          // Remove the onUploadProgress property or use a different approach
         });
       
       if (uploadError) throw uploadError;
@@ -164,13 +171,14 @@ const MechanicTaskDetails = () => {
         .from("work_photos")
         .getPublicUrl(filePath);
       
-      // Save reference in database
+      // Save reference in database using repair_photos table
       const { error: dbError } = await supabase
-        .from("work_order_photos")
+        .from("repair_photos")
         .insert({
           work_order_id: workOrder.id,
-          url: publicUrl.publicUrl,
-          upload_date: new Date().toISOString()
+          photo_url: publicUrl.publicUrl,
+          created_by: workOrder.mechanic_id || '',
+          description: ''
         });
       
       if (dbError) throw dbError;
@@ -210,11 +218,12 @@ const MechanicTaskDetails = () => {
         return;
       }
       
+      // Use order_parts table instead of work_order_parts
       const { error } = await supabase
-        .from("work_order_parts")
+        .from("order_parts")
         .insert({
           work_order_id: workOrder.id,
-          part_name: partForm.name,
+          part_id: partForm.name, // This should be a valid part_id from parts table
           price,
           quantity
         });
