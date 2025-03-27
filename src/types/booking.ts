@@ -9,7 +9,7 @@ export interface Service {
 export interface CarInfo {
   make: string;
   model: string;
-  year: string;
+  year: string; // Kept as string for form input, but we convert to number when storing
   vin: string;
 }
 

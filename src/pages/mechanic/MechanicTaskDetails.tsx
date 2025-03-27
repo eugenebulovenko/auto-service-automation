@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -97,14 +98,29 @@ const MechanicTaskDetails = () => {
           url: p.photo_url
         })) : [];
 
-      setWorkOrder({
+      // Create a complete work order object with all required fields
+      const completeWorkOrder: WorkOrder = {
         ...workOrderData,
         services,
         parts,
         photos,
-        vehicle_id: workOrderData.vehicle_id || null
-      });
-      
+        vehicle_id: null // Initialize with null, we'll fetch this separately
+      };
+
+      // Get the vehicle_id from the appointment if it exists
+      if (workOrderData.appointment_id) {
+        const { data: appointmentData } = await supabase
+          .from("appointments")
+          .select("vehicle_id")
+          .eq("id", workOrderData.appointment_id)
+          .single();
+          
+        if (appointmentData && appointmentData.vehicle_id) {
+          completeWorkOrder.vehicle_id = appointmentData.vehicle_id;
+        }
+      }
+
+      setWorkOrder(completeWorkOrder);
       setNewStatus(workOrderData.status);
     } catch (error) {
       console.error("Error fetching work order:", error);

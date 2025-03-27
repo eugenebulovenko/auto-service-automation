@@ -153,7 +153,7 @@ const BookingCalendar = () => {
             user_id: user.id,
             make: carInfo.make,
             model: carInfo.model,
-            year: parseInt(carInfo.year),
+            year: parseInt(carInfo.year), // Convert string to number here
             vin: carInfo.vin || null
           })
           .select('id')
