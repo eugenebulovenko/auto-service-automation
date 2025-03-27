@@ -46,9 +46,9 @@ const QualityCheck = ({ workOrderId, onComplete }: QualityCheckProps) => {
         return;
       }
       
-      // Записываем проверку качества
+      // Записываем проверку качества с использованием типа any для новой таблицы
       const { error: qualityError } = await supabase
-        .from('quality_checks')
+        .from('quality_checks' as any)
         .insert({
           work_order_id: workOrderId,
           checked_by: userId,

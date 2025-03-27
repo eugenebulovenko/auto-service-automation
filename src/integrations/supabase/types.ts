@@ -98,6 +98,59 @@ export type Database = {
           },
         ]
       }
+      client_loyalty_programs: {
+        Row: {
+          active_from: string
+          id: string
+          loyalty_program_id: string
+          user_id: string
+        }
+        Insert: {
+          active_from?: string
+          id?: string
+          loyalty_program_id: string
+          user_id: string
+        }
+        Update: {
+          active_from?: string
+          id?: string
+          loyalty_program_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_loyalty_programs_loyalty_program_id_fkey"
+            columns: ["loyalty_program_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_programs: {
+        Row: {
+          created_at: string
+          discount_percentage: number
+          id: string
+          min_visits: number
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          discount_percentage: number
+          id?: string
+          min_visits: number
+          name: string
+        }
+        Update: {
+          created_at?: string
+          discount_percentage?: number
+          id?: string
+          min_visits?: number
+          name?: string
+        }
+        Relationships: []
+      }
       order_parts: {
         Row: {
           created_at: string | null
@@ -237,6 +290,41 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      quality_checks: {
+        Row: {
+          check_date: string
+          checked_by: string
+          comments: string | null
+          id: string
+          status: Database["public"]["Enums"]["quality_check_status"]
+          work_order_id: string
+        }
+        Insert: {
+          check_date?: string
+          checked_by: string
+          comments?: string | null
+          id?: string
+          status: Database["public"]["Enums"]["quality_check_status"]
+          work_order_id: string
+        }
+        Update: {
+          check_date?: string
+          checked_by?: string
+          comments?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["quality_check_status"]
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quality_checks_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       repair_photos: {
         Row: {
@@ -461,6 +549,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      quality_check_status: "passed" | "issues"
       user_role: "admin" | "client" | "mechanic"
     }
     CompositeTypes: {

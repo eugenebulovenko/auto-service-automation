@@ -79,13 +79,16 @@ const LoyaltyProgram = () => {
   const fetchPrograms = async () => {
     try {
       setLoading(true);
+      // Using the type assertion to work with the new table that isn't in the types yet
       const { data, error } = await supabase
-        .from('loyalty_programs')
+        .from('loyalty_programs' as any)
         .select('*')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      setPrograms(data || []);
+      
+      // Type assertion to match our interface
+      setPrograms(data as LoyaltyProgram[] || []);
     } catch (error) {
       console.error('Error fetching loyalty programs:', error);
       toast({
@@ -100,25 +103,27 @@ const LoyaltyProgram = () => {
 
   const fetchClientLoyalties = async () => {
     try {
+      // Using type assertion for the new table
       const { data, error } = await supabase
-        .from('client_loyalty_programs')
+        .from('client_loyalty_programs' as any)
         .select(`
           *,
-          profiles:user_id(first_name, last_name),
-          programs:loyalty_program_id(name, discount_percentage)
+          profiles(first_name, last_name),
+          loyalty_programs(name, discount_percentage)
         `)
         .order('active_from', { ascending: false });
       
       if (error) throw error;
       
-      const formattedData = (data || []).map(item => ({
+      // Transform and type the data correctly
+      const formattedData = (data || []).map((item: any) => ({
         id: item.id,
         user_id: item.user_id,
         loyalty_program_id: item.loyalty_program_id,
         active_from: item.active_from,
         full_name: `${item.profiles?.first_name || ''} ${item.profiles?.last_name || ''}`,
-        program_name: item.programs?.name || '',
-        discount_percentage: item.programs?.discount_percentage || 0
+        program_name: item.loyalty_programs?.name || '',
+        discount_percentage: item.loyalty_programs?.discount_percentage || 0
       }));
       
       setClientLoyalties(formattedData);
@@ -158,8 +163,9 @@ const LoyaltyProgram = () => {
         return;
       }
       
+      // Type assertion for the new table
       const { data, error } = await supabase
-        .from('loyalty_programs')
+        .from('loyalty_programs' as any)
         .insert({
           name: newProgram.name,
           discount_percentage: newProgram.discount_percentage,
@@ -175,7 +181,9 @@ const LoyaltyProgram = () => {
         description: "Новая программа лояльности успешно создана"
       });
       
-      setPrograms([data, ...programs]);
+      // Type assertion to match our interface
+      const newProgramData = data as LoyaltyProgram;
+      setPrograms([newProgramData, ...programs]);
       setNewProgram({
         name: "",
         discount_percentage: 5,
@@ -202,8 +210,9 @@ const LoyaltyProgram = () => {
         return;
       }
       
+      // Type assertion for the new table
       const { data, error } = await supabase
-        .from('client_loyalty_programs')
+        .from('client_loyalty_programs' as any)
         .insert({
           user_id: newClientLoyalty.userId,
           loyalty_program_id: newClientLoyalty.programId,
