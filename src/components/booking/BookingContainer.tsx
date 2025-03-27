@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { BookingStep, CarInfo } from "@/types/booking";
 import { calculateEndTime, getTotalDuration, getTotalPrice } from "@/utils/bookingUtils";
@@ -14,6 +13,7 @@ import ServiceSelection from "@/components/booking/ServiceSelection";
 import CarInfoForm from "@/components/booking/CarInfoForm";
 import BookingConfirmation from "@/components/booking/BookingConfirmation";
 import BookingStepNavigation from "@/components/booking/BookingStepNavigation";
+import BookingStepIndicator from "@/components/booking/BookingStepIndicator";
 import { useBookingFlow } from "@/hooks/use-booking-flow";
 
 const BookingContainer = () => {
@@ -217,6 +217,8 @@ const BookingContainer = () => {
 
   return (
     <div className="rounded-xl glass p-6">
+      <BookingStepIndicator currentStep={currentStep} />
+      
       <div className="mb-8">
         {renderStepContent()}
       </div>
