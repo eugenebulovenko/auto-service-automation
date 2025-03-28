@@ -187,13 +187,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       
-      // Manually clear state
+      // Принудительно очищаем состояние
       setUser(null);
       setSession(null);
       setProfile(null);
       
       console.log("User signed out successfully");
-      navigate("/");
+      
+      // Добавляем небольшую задержку перед переходом
+      setTimeout(() => {
+        navigate("/");
+      }, 100);
+      
+      toast({
+        title: "Выход выполнен",
+        description: "Вы успешно вышли из системы",
+      });
     } catch (error: any) {
       console.error("Unexpected logout error:", error);
       toast({
