@@ -7,6 +7,7 @@ export const authService = {
   },
   
   signUp: async (email: string, password: string, userData: Record<string, any>) => {
+    console.log("Auth service: Signing up with user data:", userData);
     return await supabase.auth.signUp({
       email,
       password,
