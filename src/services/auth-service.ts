@@ -28,7 +28,19 @@ export const authService = {
   },
   
   signOut: async () => {
-    return await supabase.auth.signOut();
+    try {
+      console.log("Auth service: Signing out");
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Logout error:", error);
+        throw error;
+      }
+      console.log("Auth service: Successfully signed out");
+      return { error: null };
+    } catch (error) {
+      console.error("Unexpected signOut error:", error);
+      return { error };
+    }
   },
   
   onAuthStateChange: (callback: (event: any, session: any) => void) => {
