@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,14 +80,14 @@ const LoyaltyProgram = () => {
       setLoading(true);
       // Using the type assertion to work with the new table that isn't in the types yet
       const { data, error } = await supabase
-        .from('loyalty_programs' as any)
+        .from('loyalty_programs')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
       // Type assertion to match our interface
-      setPrograms(data as LoyaltyProgram[] || []);
+      setPrograms((data as unknown as LoyaltyProgram[]) || []);
     } catch (error) {
       console.error('Error fetching loyalty programs:', error);
       toast({
@@ -105,13 +104,12 @@ const LoyaltyProgram = () => {
     try {
       // Using type assertion for the new table
       const { data, error } = await supabase
-        .from('client_loyalty_programs' as any)
+        .from('client_loyalty_programs')
         .select(`
           *,
           profiles(first_name, last_name),
           loyalty_programs(name, discount_percentage)
-        `)
-        .order('active_from', { ascending: false });
+        `);
       
       if (error) throw error;
       
@@ -165,7 +163,7 @@ const LoyaltyProgram = () => {
       
       // Type assertion for the new table
       const { data, error } = await supabase
-        .from('loyalty_programs' as any)
+        .from('loyalty_programs')
         .insert({
           name: newProgram.name,
           discount_percentage: newProgram.discount_percentage,
@@ -182,7 +180,7 @@ const LoyaltyProgram = () => {
       });
       
       // Type assertion to match our interface
-      const newProgramData = data as LoyaltyProgram;
+      const newProgramData = data as unknown as LoyaltyProgram;
       setPrograms([newProgramData, ...programs]);
       setNewProgram({
         name: "",
@@ -212,7 +210,7 @@ const LoyaltyProgram = () => {
       
       // Type assertion for the new table
       const { data, error } = await supabase
-        .from('client_loyalty_programs' as any)
+        .from('client_loyalty_programs')
         .insert({
           user_id: newClientLoyalty.userId,
           loyalty_program_id: newClientLoyalty.programId,
@@ -334,7 +332,7 @@ const LoyaltyProgram = () => {
                         </span>
                         <span className="flex items-center">
                           <Users className="h-3.5 w-3.5 mr-1" />
-                          Мин. визитов: {program.min_visits}
+                          Мин. визи��ов: {program.min_visits}
                         </span>
                       </div>
                     </div>
