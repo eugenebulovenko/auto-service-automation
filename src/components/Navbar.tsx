@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, ChevronDown, User, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,11 +12,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "@/hooks/use-toast";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, signOut, profile, isAdmin, isMechanic } = useAuth();
 
   const getNavLinks = () => {
@@ -73,6 +75,24 @@ const Navbar = () => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Выход выполнен",
+        description: "Вы успешно вышли из системы",
+      });
+      navigate('/');
+    } catch (error) {
+      console.error("Sign out error:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось выйти из системы",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -120,7 +140,7 @@ const Navbar = () => {
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="bg-white">
                   <DropdownMenuLabel>
                     {profile?.first_name} {profile?.last_name}
                   </DropdownMenuLabel>
@@ -137,7 +157,7 @@ const Navbar = () => {
                     <Link to="/profile">Настройки профиля</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => signOut()} className="text-red-500">
+                  <DropdownMenuItem onClick={handleSignOut} className="text-red-500">
                     <LogOut className="mr-2 h-4 w-4" />
                     Выйти
                   </DropdownMenuItem>
@@ -209,7 +229,7 @@ const Navbar = () => {
                   <Button 
                     variant="outline" 
                     className="justify-start text-sm font-medium mt-2"
-                    onClick={() => signOut()}
+                    onClick={handleSignOut}
                   >
                     <LogOut className="mr-2 h-4 w-4" />
                     Выйти

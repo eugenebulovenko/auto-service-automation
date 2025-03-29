@@ -194,15 +194,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       console.log("User signed out successfully");
       
-      // Добавляем небольшую задержку перед переходом
-      setTimeout(() => {
-        navigate("/");
-      }, 100);
-      
       toast({
         title: "Выход выполнен",
         description: "Вы успешно вышли из системы",
       });
+      
+      // Редирект на главную страницу
+      navigate("/");
     } catch (error: any) {
       console.error("Unexpected logout error:", error);
       toast({
