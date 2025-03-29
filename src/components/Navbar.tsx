@@ -26,7 +26,7 @@ const Navbar = () => {
     const commonLinks = [
       { name: "Главная", path: "/" },
       { name: "Услуги", path: "/services" },
-      { name: "Контакты", path: "/contact" },
+      { name: "Контакты", path: "/contacts" },
     ];
 
     // Если пользователь авторизован
@@ -150,8 +150,18 @@ const Navbar = () => {
                     {profile?.role === 'client' && "Клиент"}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin">Панель администратора</Link>
+                    </DropdownMenuItem>
+                  )}
+                  {isMechanic && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/mechanic">Панель механика</Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard">Панель управления</Link>
+                    <Link to="/dashboard">Личный кабинет</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/profile">Настройки профиля</Link>
@@ -220,8 +230,18 @@ const Navbar = () => {
             <div className="flex flex-col space-y-2 pt-2 border-t border-border">
               {user ? (
                 <>
+                  {isAdmin && (
+                    <Link to="/admin" className="text-sm font-medium py-2">
+                      Панель администратора
+                    </Link>
+                  )}
+                  {isMechanic && (
+                    <Link to="/mechanic" className="text-sm font-medium py-2">
+                      Панель механика
+                    </Link>
+                  )}
                   <Link to="/dashboard" className="text-sm font-medium py-2">
-                    Панель управления
+                    Личный кабинет
                   </Link>
                   <Link to="/profile" className="text-sm font-medium py-2">
                     Настройки профиля
