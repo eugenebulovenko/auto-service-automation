@@ -141,6 +141,82 @@ export type Database = {
           },
         ]
       }
+      loyalty_offers: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          description: string | null
+          discount: number
+          id: string
+          is_active: boolean
+          points_required: number
+          title: string
+          updated_at: string | null
+          valid_until: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          description?: string | null
+          discount: number
+          id?: string
+          is_active?: boolean
+          points_required: number
+          title: string
+          updated_at?: string | null
+          valid_until: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          description?: string | null
+          discount?: number
+          id?: string
+          is_active?: boolean
+          points_required?: number
+          title?: string
+          updated_at?: string | null
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_offers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_points: {
+        Row: {
+          client_id: string
+          id: string
+          last_updated: string | null
+          points: number
+        }
+        Insert: {
+          client_id: string
+          id?: string
+          last_updated?: string | null
+          points?: number
+        }
+        Update: {
+          client_id?: string
+          id?: string
+          last_updated?: string | null
+          points?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_points_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loyalty_programs: {
         Row: {
           created_at: string | null
@@ -459,6 +535,50 @@ export type Database = {
         }
         Relationships: []
       }
+      service_history: {
+        Row: {
+          cost: number
+          created_at: string | null
+          description: string | null
+          id: string
+          service_date: string
+          service_type: string
+          status: string
+          updated_at: string | null
+          vehicle_id: string
+        }
+        Insert: {
+          cost: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          service_date: string
+          service_type: string
+          status: string
+          updated_at?: string | null
+          vehicle_id: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          service_date?: string
+          service_type?: string
+          status?: string
+          updated_at?: string | null
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_history_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           category_id: string
@@ -499,6 +619,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      time_slots: {
+        Row: {
+          end_time: string
+          id: string
+          is_available: boolean | null
+          start_time: string
+        }
+        Insert: {
+          end_time: string
+          id?: string
+          is_available?: boolean | null
+          start_time: string
+        }
+        Update: {
+          end_time?: string
+          id?: string
+          is_available?: boolean | null
+          start_time?: string
+        }
+        Relationships: []
       }
       vehicles: {
         Row: {
@@ -597,6 +738,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      work_schedule: {
+        Row: {
+          closing_time: string
+          created_at: string | null
+          day_of_week: string
+          id: string
+          is_day_off: boolean | null
+          opening_time: string
+        }
+        Insert: {
+          closing_time: string
+          created_at?: string | null
+          day_of_week: string
+          id?: string
+          is_day_off?: boolean | null
+          opening_time: string
+        }
+        Update: {
+          closing_time?: string
+          created_at?: string | null
+          day_of_week?: string
+          id?: string
+          is_day_off?: boolean | null
+          opening_time?: string
+        }
+        Relationships: []
       }
     }
     Views: {
