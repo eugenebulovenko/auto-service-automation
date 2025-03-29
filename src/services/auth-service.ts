@@ -32,6 +32,8 @@ export const authService = {
       console.log("Auth service: Signing out");
       // Очищаем локальное хранилище перед выходом из системы
       localStorage.removeItem('supabase.auth.token');
+      localStorage.removeItem('supabase.auth.expires_at');
+      localStorage.removeItem('supabase.auth.refresh_token');
       
       const { error } = await supabase.auth.signOut({ scope: 'global' });
       if (error) {
